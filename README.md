@@ -1,82 +1,93 @@
-# CanalNonGrato
+<p align="center">
+  <a href="https://allm4.com/canalnongrato/">
+    <img src=".github/assets/canalnongrato-cover.png" alt="CanalNonGrato — Seu feed, suas regras. Bloqueie canais indesejados no YouTube." width="1200" />
+  </a>
+</p>
 
-<img src="extension/icons/mark.svg" alt="Ícone do CanalNonGrato" width="88" />
+<h1 align="center">CanalNonGrato</h1>
 
-Extensão para Microsoft Edge (também compatível com Chrome) que mantém uma lista local de canais indesejados no YouTube. Interface em português, ícone próprio e nenhum framework no pacote instalado.
+<p align="center">
+  Menos canais indesejados. <strong>Mais espaço para o que você gosta.</strong><br />
+  Gratuito, em português, para Microsoft Edge e Google Chrome no computador.
+</p>
 
-## Baixar e instalar
+<p align="center">
+  <strong><a href="https://allm4.com/canalnongrato/">Conhecer e experimentar</a></strong>
+  &nbsp; · &nbsp;
+  <strong><a href="https://github.com/Benfic4rthur/CanalNonGrato/releases/latest">Baixar a última versão</a></strong>
+  &nbsp; · &nbsp;
+  <a href="#instalação">Como instalar</a>
+</p>
 
-**[Baixar CanalNonGrato 1.0.3 (.zip)](https://github.com/Benfic4rthur/CanalNonGrato/releases/download/v1.0.3/CanalNonGrato-1.0.3.zip)** — gratuito, para Edge e Chrome no computador. A distribuição é direta; a extensão não está nas lojas dos navegadores.
+---
 
-Extraia o ZIP e guarde a pasta em um lugar fixo. Depois:
+## Seu feed, suas regras
 
-### Microsoft Edge
+Viu um canal que não quer mais acompanhar? Clique em **Bloquear**. O CanalNonGrato guarda a sua escolha e filtra os conteúdos publicados por ele, inclusive nas pesquisas, nos Shorts e nas recomendações ao lado do vídeo.
 
-1. Abra `edge://extensions` na barra de endereços do Edge.
-2. Ative **Modo do desenvolvedor** e clique em **Carregar sem pacote** / **Carregar sem compactação** (Load unpacked, dependendo da versão e do idioma).
-3. Selecione a pasta extraída que contém o arquivo `manifest.json`. Se você clonou este repositório, selecione a pasta `extension`.
-4. Fixe o CanalNonGrato no menu de extensões e recarregue as abas do YouTube.
+| Recurso | Como funciona |
+| --- | --- |
+| **Bloqueio onde você vê vídeos** | Filtra a página inicial, recomendações, pesquisas, Shorts, playlists e publicações identificadas como sendo do canal. |
+| **Um clique no vídeo aberto** | O botão **Bloquear canal** fica ao lado de Inscrever-se. Nas listas, use **Bloquear** junto ao autor. |
+| **Sua lista, organizada** | Nome e foto do canal, busca e desbloqueio pelo ícone da extensão ou pelo painel completo. |
+| **Identificação do canal** | Quando disponível, usa o ID imutável do YouTube para manter o bloqueio mesmo se o nome ou o @ mudar. |
+| **Backup das suas escolhas** | Exporte e importe a lista em JSON para guardar uma cópia ou levá-la a outro navegador. |
+| **Leve no navegador** | Sem bibliotecas de execução na extensão instalada, sem servidor próprio e sem verificações periódicas. |
 
-### Google Chrome
+O bloqueio identifica **quem publicou o conteúdo**. Vídeos de outros canais que mencionam a mesma pessoa ou assunto podem continuar aparecendo. [Veja a cobertura e os limites do filtro](docs/guia.md#onde-o-filtro-atua).
 
-1. Abra `chrome://extensions` na barra de endereços do Chrome.
-2. Ative **Modo do desenvolvedor** e clique em **Carregar sem compactação** (Load unpacked).
-3. Selecione a pasta extraída que contém o arquivo `manifest.json`, ou a pasta `extension` se clonou este repositório.
-4. Fixe o ícone e recarregue as abas do YouTube.
+## Instalação
 
-Também há um ZIP pronto em `dist/CanalNonGrato-1.0.3.zip`. Para instalar a partir dele, extraia e selecione a pasta que contém o `manifest.json`. Mantenha essa pasta no mesmo lugar depois da instalação. Não precisa executar npm, instalar dependências ou rodar um servidor para usar a extensão.
+**[Baixe o ZIP na última release](https://github.com/Benfic4rthur/CanalNonGrato/releases/latest)**, extraia e guarde a pasta em um lugar fixo. O mesmo pacote serve para Edge e Chrome.
 
-Instruções oficiais: [Microsoft Edge](https://learn.microsoft.com/en-us/microsoft-edge/extensions/getting-started/extension-sideloading) · [Google Chrome](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked). Atualizações são manuais: baixe o novo pacote, substitua os arquivos na pasta e clique em Recarregar no cartão da extensão.
+| Microsoft Edge | Google Chrome |
+| --- | --- |
+| Abra `edge://extensions` | Abra `chrome://extensions` |
+| Ative **Modo do desenvolvedor** | Ative **Modo do desenvolvedor** |
+| Clique em **Carregar sem pacote** ou **Carregar sem compactação** | Clique em **Carregar sem compactação** |
 
-## Usar
+1. Selecione **a pasta extraída que contém `manifest.json`**. Se você clonou o repositório, selecione a pasta [`extension`](extension/).
+2. Fixe o ícone do CanalNonGrato no menu de extensões e recarregue as abas do YouTube.
+3. Use **Bloquear** nos vídeos ou abra o ícone da extensão para adicionar um **@**, link ou nome exato.
 
-- Clique em **Bloquear** junto ao autor dos vídeos e das playlists, ou no ícone de bloqueio dos cartões de Shorts. No vídeo aberto, use **Bloquear canal**, ao lado de Inscrever-se.
-- Abra o ícone da extensão para adicionar um **@**, link de canal, ID, link de vídeo ou nome exato.
-- Use **Desbloquear** na lista para permitir o canal novamente. As abas abertas recebem a alteração automaticamente; o aviso também permite desfazer a última ação.
-- Use **Abrir painel** para gerenciar a lista em uma página maior. A busca filtra a lista; **Exportar** e **Importar** fazem backup em JSON sem substituir os canais já bloqueados.
-- A lista mostra a foto de perfil do canal. Canais já bloqueados recebem as fotos automaticamente; iniciais são usadas enquanto a imagem carrega ou quando não é possível obtê-la.
+A distribuição é por ZIP, fora das lojas dos navegadores. **Não é necessário instalar Node.js, dependências ou rodar um servidor para usar.** As atualizações também são manuais: substitua os arquivos na pasta instalada, clique em **Recarregar** no cartão da extensão e recarregue o YouTube.
 
-Prefira o botão no vídeo, um @ ou um link. Quando possível, o canal fica salvo pelo ID imutável do YouTube e continua bloqueado se mudar de nome ou @. Nomes digitados sozinhos são comparados por nome exato (ignorando caixa, espaços extras e acentos); canais diferentes com o mesmo nome também podem ser ocultados por essa regra.
+Instruções oficiais: [Microsoft Edge](https://learn.microsoft.com/en-us/microsoft-edge/extensions/getting-started/extension-sideloading) · [Google Chrome](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
 
-## Cobertura
+## Mudou de ideia? Você pode desbloquear
 
-O filtro trata a página inicial, recomendações laterais, resultados de pesquisa, cartões de Shorts, playlists, publicações de canais e cartões de encerramento que forneçam um link de vídeo. Links diretos de vídeos, Shorts e canais bloqueados recebem uma barreira, e a reprodução é pausada. Prateleiras cujos vídeos estão todos bloqueados também são ocultadas.
+Abra o ícone do CanalNonGrato, procure o canal na lista e clique em **Desbloquear**. As abas abertas recebem a mudança automaticamente. **Abrir painel** mostra a lista em uma página maior; **Exportar** e **Importar** fazem backup das suas escolhas.
 
-O suporte inclui renderers clássicos e os novos `yt-lockup-view-model` e Shorts v2. Elementos novos e cartões reutilizados pelo YouTube são verificados durante a navegação e o carregamento contínuo.
-
-O bloqueio atua na interface do YouTube **neste navegador**. Não altera a conta nem os servidores do YouTube, nem outros navegadores ou aplicativos. O YouTube pode alterar seus formatos; nenhum filtro de interface pode garantir que todas as mudanças futuras estejam cobertas. Se não for possível obter a identidade de um vídeo após uma falha de rede, ele poderá continuar visível. Formatos que escaparem precisam de atualização dos seletores ou da leitura de metadados.
+Prefira o botão no vídeo, um **@** ou um link para identificar o canal com precisão. Nomes digitados sozinhos são comparados por nome exato; canais diferentes com o mesmo nome também podem ser ocultados. [Leia o guia de uso](docs/guia.md).
 
 ## Leveza e privacidade
 
-- JavaScript, CSS e SVG locais, sem dependências na extensão instalada, fontes externas ou rastreamento.
-- Manifest V3: o processo de fundo dorme quando está ocioso. Sem verificações periódicas ou servidores próprios.
-- A instalação/atualização ativa o filtro em abas do YouTube já abertas, inclusive documentos antigos mantidos pela navegação interna do site. A ativação é protegida contra scripts e botões duplicados.
-- O observador agrupa os elementos alterados; a filtragem usa índices de IDs, caminhos e nomes. Trabalho dividido em lotes de até 60 cartões.
-- Dados da página identificam os canais primeiro. Consultas auxiliares ao YouTube ocorrem somente quando necessárias, com no máximo duas simultâneas, tempo limite e cache de sessão limitado. As consultas de metadados não enviam cookies da conta.
-- Lista em `chrome.storage.local`: não sincroniza nem sai do navegador. Cache temporário em `chrome.storage.session`. Desinstalar apaga esses dados; exporte a lista para guardá-la.
-- Para obter identidades e fotos, a extensão consulta páginas públicas dos canais no YouTube. As fotos de 88 pixels carregam sob demanda pelos servidores de imagens do YouTube/Google, sem enviar o endereço da página como referência. Não há rastreamento próprio.
-- Permissões: armazenamento da extensão, execução do filtro nas abas existentes e acesso aos domínios do YouTube. Sem acesso geral ao histórico ou cookies.
+- A extensão instalada usa JavaScript, CSS e ícones locais, sem dependências de execução, analytics ou servidor próprio.
+- A lista fica no perfil do navegador, em `chrome.storage.local`. Não é sincronizada com a conta do YouTube.
+- Usa as permissões `storage` e `scripting`, com acesso limitado aos domínios do YouTube declarados no manifesto. Não pede acesso geral ao histórico ou aos cookies.
+- Metadados públicos do YouTube ajudam a identificar os canais. As fotos podem ser carregadas dos servidores do YouTube/Google; não há rastreamento próprio.
+- O processo de fundo dorme quando ocioso. A filtragem acompanha alterações da página, agrupa o trabalho e usa cache para evitar consultas repetidas.
 
-## Desenvolvimento e verificação
+O filtro atua no YouTube deste navegador. Mudanças na interface do YouTube podem exigir atualizações da extensão. Exporte um backup antes de desinstalar ou apagar o perfil.
 
-Requer Node.js 22+ e Microsoft Edge instalado para os testes de navegador.
+Consulte o [manifesto](extension/manifest.json), o [código da extensão](extension/) e o [guia de funcionamento](docs/guia.md).
 
-```sh
-npm ci
-npm run build
-npm test
-```
+## Para quem quer olhar por dentro
 
-`npm run build` gera os ícones PNG, o leitor de metadados para o contexto MAIN e o ZIP. As dependências de desenvolvimento (`@playwright/test` e `sharp`) não são distribuídas na extensão.
+| Diretório | Conteúdo |
+| --- | --- |
+| [`extension/`](extension/) | Extensão instalável, interface em português e ícone oficial. |
+| [`tests/`](tests/) | Testes de identidades, filtragem, conteúdo dinâmico, backups e ociosidade. |
+| [`scripts/`](scripts/) | Build, geração dos ícones, empacotamento e verificação no YouTube real. |
+| [`docs/`](docs/) | Guias de uso, desenvolvimento e publicação de versões. |
 
-Os testes cobrem identidades, normalização, alterações de nome/@, cartões antigos e atuais, Shorts v2 sem byline, conteúdo dinâmico, desbloqueio entre abas, barreiras de acesso direto, reprodução pausada, backup, importação, gravações concorrentes, ativação em abas antigas sem recarregar, prateleiras vazias de postagens, células de Shorts sem espaços reservados, fotos de canais existentes e ociosidade com 500 cartões adicionais. Os testes usam um perfil temporário do Edge e respostas determinísticas para os metadados.
+**[Desenvolver e testar](docs/desenvolvimento.md)** · **[Publicar uma versão](docs/publicacao.md)** · **[Relatar um problema](https://github.com/Benfic4rthur/CanalNonGrato/issues)**
 
-Para conferir o site real em um perfil temporário e sem login:
+As releases alimentam os downloads do site automaticamente: versão, tamanho e pacote pertencem à mesma release estável. Em caso de falha na consulta, o site leva à página da última release.
 
-```sh
-node scripts/live-smoke.cjs
-```
+---
 
-Esse teste bloqueia o MW Informática na pesquisa, verifica um link direto e um cartão da lateral de um vídeo. O perfil temporário é removido ao terminar. Capturas ficam em `artifacts/` e não entram no ZIP. O teste depende da disponibilidade e do formato atual do YouTube.
-
-Estrutura: `extension/` é o produto instalável; `scripts/` contém a montagem e a verificação no site real; `tests/` contém a suíte de regressão. Após editar o código, rode o build e clique em **Recarregar** no cartão da extensão em `edge://extensions`. O filtro é ativado nas abas existentes; ao atualizar versões anteriores a 1.0.1, recarregar o YouTube uma vez também encerra os scripts da versão antiga que o navegador tiver mantido na página.
+<p align="center">
+  Feito pela <a href="https://allm4.com/">ALLM4</a>.<br />
+  <sub>Projeto independente, sem vínculo com YouTube, Google ou Microsoft.</sub>
+</p>
