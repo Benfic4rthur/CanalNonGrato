@@ -1,0 +1,17 @@
+CanalNonGrato — instalação no Microsoft Edge
+
+1. Abra edge://extensions no Edge.
+2. Ative o Modo do desenvolvedor.
+3. Clique em Carregar sem compactação / Carregar expandida.
+4. Escolha esta pasta (a que contém o manifest.json).
+5. As abas já abertas são ativadas automaticamente. Fixe o ícone da extensão.
+
+Clique no símbolo de bloqueio no canto dos vídeos para bloquear o canal.
+No ícone da extensão, gerencie a lista e desbloqueie quando quiser.
+Prefira @ ou link para identificar o canal com precisão.
+
+Os dados ficam somente neste navegador. Exporte um backup antes de
+desinstalar. O filtro depende dos formatos do YouTube e pode precisar
+de atualização se o site mudar. Mantenha esta pasta no mesmo lugar.
+
+Extensão local — versão 1.0.3.

@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "CanalNonGrato",
+  "version": "1.0.3",
+  "description": "Seu YouTube, do seu jeito. Bloqueie canais nas recomendações, pesquisas, Shorts e vídeos.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://www.youtube.com/*", "https://youtube.com/*", "https://m.youtube.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "CanalNonGrato · Canais bloqueados",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" }
+  },
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*", "https://m.youtube.com/*"],
+      "js": ["bridge.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*", "https://m.youtube.com/*"],
+      "js": ["core.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

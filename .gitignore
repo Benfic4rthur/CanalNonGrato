@@ -1,0 +1,12 @@
+node_modules/
+test-results/
+playwright-report/
+.DS_Store
+artifacts/
+site-canalnongrato/
+.env
+.env.*
+*.pem
+*.key
+dist/*
+!dist/CanalNonGrato-1.0.3.zip

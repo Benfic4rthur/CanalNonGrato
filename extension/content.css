@@ -1,0 +1,46 @@
+.cng-hidden { display: none !important; }
+.cng-checking { visibility: hidden !important; }
+.cng-card { position: relative !important; }
+.cng-block {
+  position: absolute !important; top: 6px !important; right: 6px !important; z-index: 10 !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  width: 28px !important; height: 28px !important; padding: 5px !important; border: 0 !important;
+  border-radius: 50% !important; background: #0009 !important; color: #fff !important;
+  box-shadow: none !important; cursor: pointer !important; opacity: 1 !important;
+  font: 500 14px/1.2 Roboto, Arial, sans-serif !important; box-sizing: border-box !important;
+}
+.cng-block:not([data-cng-version]) { display: none !important; }
+.cng-block svg { width: 18px !important; height: 18px !important; flex-shrink: 0; }
+.cng-block:hover { background: #000c !important; }
+.cng-block:focus-visible { outline: 2px solid var(--yt-spec-call-to-action, #3ea6ff) !important; outline-offset: 2px !important; }
+.cng-block:disabled { cursor: wait !important; opacity: .6 !important; }
+.cng-block-text { display: none !important; }
+.cng-inline-actions { display: flex !important; align-items: center !important; flex-wrap: wrap !important; column-gap: 6px !important; row-gap: 4px !important; min-width: 0; }
+.cng-block-inline { position: static !important; inset: auto !important; flex: 0 0 auto !important; width: auto !important; height: 28px !important; margin: 0 !important; padding: 0 10px !important; gap: 5px !important; border-radius: 14px !important; background: var(--yt-spec-badge-chip-background, #ffffff1a) !important; color: var(--yt-spec-text-primary, #f1f1f1) !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; }
+.cng-block-inline .cng-block-text { display: inline !important; }
+.cng-block-inline svg { width: 15px !important; height: 15px !important; }
+.cng-block-inline:hover { background: var(--yt-spec-button-chip-background-hover, #ffffff33) !important; }
+.cng-watch-actions { align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; }
+.cng-block-label { position: static !important; inset: auto !important; flex: 0 0 auto !important; width: auto !important; height: 36px !important; padding: 0 14px !important; gap: 7px !important; margin: 0 !important; border-radius: 18px !important; background: var(--yt-spec-badge-chip-background, #ffffff1a) !important; color: var(--yt-spec-text-primary, #f1f1f1) !important; white-space: nowrap; }
+.cng-block-label:hover { background: var(--yt-spec-button-chip-background-hover, #ffffff33) !important; }
+[data-cng-gated] ytd-page-manager, [data-cng-gated] #movie_player, [data-cng-gated] ytm-app,
+[data-cng-verifying] ytd-page-manager, [data-cng-verifying] #movie_player, [data-cng-verifying] ytm-app { visibility: hidden !important; }
+#cng-gate {
+  position: fixed; inset: 56px 0 0; z-index: 2147483600; display: grid; place-items: center;
+  padding: 24px; background: #111923; color: #f4f0e9; font: 16px/1.6 system-ui, sans-serif;
+  box-sizing: border-box;
+}
+.cng-gate-panel { max-width: 450px; text-align: center; }
+.cng-gate-icon { display: grid; place-items: center; width: 72px; height: 72px; margin: auto auto 28px; border-radius: 24px; background: #e8826520; color: #f3987c; }
+.cng-gate-icon svg { width: 42px; height: 42px; }
+.cng-gate-brand { font-size: 11px; letter-spacing: 2px; color: #e99b83; }
+#cng-gate h1 { margin: 12px 0; font-size: 32px; line-height: 1.2; font-weight: 650; letter-spacing: -1px; }
+#cng-gate p { color: #a7b0bc; }
+#cng-gate a, #cng-gate button { display: block; width: 100%; box-sizing: border-box; margin-top: 12px; padding: 12px 20px; border: 1px solid #ffffff20; border-radius: 12px; cursor: pointer; text-decoration: none; font: 600 14px system-ui, sans-serif; }
+#cng-gate a { margin-top: 30px; background: #e88265; color: #171f28; }
+#cng-gate button { background: transparent; color: #e4e7ec; }
+#cng-gate :is(a,button):focus-visible { outline: 3px solid #e88265; outline-offset: 3px; }
+#cng-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 2147483647; max-width: min(540px, 85vw); display: flex; align-items: center; gap: 24px; padding: 16px 20px; border: 1px solid #ffffff20; border-radius: 14px; box-shadow: 0 8px 32px #0005; background: #19232f; color: #f4f0e9; font: 14px/1.5 system-ui, sans-serif; }
+#cng-toast button { background: none; border: 0; color: #ffb6a2; cursor: pointer; padding: 4px; font: 600 14px system-ui, sans-serif; }
+@media (max-width: 700px) { .cng-block-label { padding: 0 12px !important; font-size: 12px !important; } #cng-gate h1 { font-size: 26px; } }
+@media (prefers-reduced-motion: no-preference) { .cng-block { transition: background .15s, color .15s; } }
