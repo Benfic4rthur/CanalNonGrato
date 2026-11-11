@@ -78,3 +78,16 @@ test('inscrições usam IDs explícitos e a seção de inscrições, nunca nomes
   assert(!entries.some(([owner, value]) => owner.channelId === other && value === true));
   assert.deepEqual(C.subscriptionEntries({ subscribeButtonRenderer: { channelId: 'bad', subscribed: true } }), []);
 });
+
+test('lista de inscrições extrai IDs, handles e continuação somente do conteúdo do feed', () => {
+  const renderer = { channelId: id, title: { simpleText: 'Meu canal' }, navigationEndpoint: { browseEndpoint: { browseId: id, canonicalBaseUrl: '/@meucanal' } } };
+  const result = C.subscriptionPage({
+    contents: { items: [{ channelRenderer: renderer }, { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: 'next-page' } } } }] },
+    guide: { channelRenderer: { ...renderer, channelId: other } }
+  });
+  assert.equal(result.channels.length, 1);
+  assert.equal(result.channels[0].path, '/@meucanal');
+  assert.deepEqual(result.continuations, ['next-page']);
+  const next = C.subscriptionPage({ onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems: [{ channelRenderer: { ...renderer, channelId: other } }] } }] });
+  assert.equal(next.channels[0].channelId, other);
+});

@@ -21,7 +21,9 @@ Nomes digitados sozinhos são comparados por nome exato, ignorando caixa, espaç
 
 ### Canais em que você é inscrito
 
-O botão de bloqueio é ocultado quando o YouTube informa que você já é inscrito no canal. A extensão usa os dados de inscrição presentes na página, no guia de inscrições e nos controles de Inscrito, sem consultar cada canal pela rede. Ao receber uma mudança de inscrição, atualiza os botões da aba.
+O botão de bloqueio é ocultado nos canais em que você é inscrito, inclusive nas recomendações e nas playlists. Não é necessário abrir o vídeo ou a página de cada canal: a extensão lê a sua lista de inscrições no próprio YouTube, com a sessão que você já usa, e acompanha a paginação quando houver.
+
+A lista fica em cache por até 30 minutos na sessão da aba, separada por conta. A consulta acontece ao carregar uma página sem cache válido; não há consulta individual por vídeo nem verificação contínua por temporizador. Mudanças de inscrição notificadas pelo YouTube também atualizam as outras abas abertas. Se o YouTube estiver indisponível, a extensão preserva os sinais de inscrição que conseguiu confirmar; uma falha de consulta não é interpretada como cancelamento de inscrição. Esses dados não são enviados ao ALLM4, ao GitHub ou a outro serviço.
 
 Isso evita os botões junto ao autor e nos cartões do canal identificado como inscrito. O gerenciamento manual da lista de bloqueados continua disponível no painel; a mudança não apaga bloqueios que você já tenha criado.
 

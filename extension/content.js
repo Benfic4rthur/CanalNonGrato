@@ -37,6 +37,7 @@
   const observed = new WeakSet();
   const buttons = new WeakMap();
   const inspected = new WeakMap(), subscriptions = new Map(), subscriptionAliases = new Map();
+  const subscriptionOwners = new Map(), subscriptionNames = new Map(), subscriptionOwnerPaths = new Map();
   let subscriptionScan = false;
   let io;
 
@@ -45,7 +46,22 @@
   }
   function learnSubscription(owner, subscribed) {
     let changed = false;
+    const linked = owner.path && subscriptionOwnerPaths.get(C.normalize(owner.path));
+    if (linked) owner = C.merge(subscriptionOwners.get(linked), owner);
     const keys = subscriptionKeys(owner), id = owner.channelId && "id:" + owner.channelId;
+    const ownerKey = id || keys[0];
+    if (ownerKey) {
+      const previous = subscriptionOwners.get(ownerKey);
+      const merged = C.merge(previous, owner);
+      subscriptionOwners.set(ownerKey, merged);
+      if (merged.path) subscriptionOwnerPaths.set(C.normalize(merged.path), ownerKey);
+      if (previous?.name && C.nameKey(previous.name) !== C.nameKey(merged.name)) subscriptionNames.get(C.nameKey(previous.name))?.delete(ownerKey);
+      if (merged.name) {
+        const name = C.nameKey(merged.name);
+        if (!subscriptionNames.has(name)) subscriptionNames.set(name, new Map());
+        subscriptionNames.get(name).set(ownerKey, subscribed);
+      }
+    }
     if (id) {
       if (!subscriptionAliases.has(id)) subscriptionAliases.set(id, new Set());
       for (const key of keys) subscriptionAliases.get(id).add(key);
@@ -76,7 +92,9 @@
     if (typeof state === "boolean") learnSubscription(owner, state);
     const keys = subscriptionKeys(owner);
     const known = keys.find(key => subscriptions.has(key));
-    const subscribed = state ?? (known ? subscriptions.get(known) : false);
+    const names = !owner.channelId && !owner.path && subscriptionNames.get(C.nameKey(owner.name));
+    const nameState = names?.size === 1 ? [...names.values()][0] : false;
+    const subscribed = state ?? (known ? subscriptions.get(known) : nameState);
     if (known && owner.channelId && owner.path) learnSubscription(owner, subscribed);
     return subscribed;
   }
@@ -383,6 +401,9 @@
     if (typeof event.detail !== "string" || event.detail.length > 2000000) return;
     try {
       const payload = JSON.parse(event.detail);
+      if (payload.resetSubscriptions === true) {
+        subscriptions.clear(); subscriptionAliases.clear(); subscriptionOwners.clear(); subscriptionNames.clear(); subscriptionOwnerPaths.clear();
+      }
       if (payload.channel) {
         const owner = C.identity(payload.channel), route = C.channelPath(location.href);
         if (route && (C.normalize(route) === C.normalize(owner.path) || route === "/channel/" + owner.channelId)) channelPage = { route, owner };

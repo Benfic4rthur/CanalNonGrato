@@ -67,6 +67,7 @@ Prefira o botão no vídeo, um **@** ou um link para identificar o canal com pre
 - A lista fica no perfil do navegador, em `chrome.storage.local`. Não é sincronizada com a conta do YouTube.
 - Usa as permissões `storage` e `scripting`, com acesso limitado aos domínios do YouTube declarados no manifesto. Não pede acesso geral ao histórico ou aos cookies.
 - Metadados públicos do YouTube ajudam a identificar os canais. As fotos podem ser carregadas dos servidores do YouTube/Google; não há rastreamento próprio.
+- Para ocultar os botões nos canais inscritos, lê a lista de inscrições no próprio YouTube usando sua sessão atual. O cache é local à sessão da aba e separado por conta; a lista não é enviada a outros serviços.
 - O processo de fundo dorme quando ocioso. A filtragem acompanha alterações da página, agrupa o trabalho e usa cache para evitar consultas repetidas.
 
 O filtro atua no YouTube deste navegador. Mudanças na interface do YouTube podem exigir atualizações da extensão. Exporte um backup antes de desinstalar ou apagar o perfil.

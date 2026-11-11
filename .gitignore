@@ -11,3 +11,5 @@ site-canalnongrato/
 dist/*
 !dist/CanalNonGrato-1.0.3.zip
 !dist/CanalNonGrato-1.0.4.zip
+
+!dist/CanalNonGrato-1.0.5.zip

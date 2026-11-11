@@ -339,3 +339,93 @@ test('página de canal inscrito filtra os botões dos vídeos do próprio canal'
   await expect(page.locator('#compact .cng-block')).toHaveCount(0);
   await expect(page.locator('#safe .cng-block')).toHaveCount(1);
 });
+
+test('sincroniza a lista completa, incluindo paginação, sem abrir os canais e reutiliza o cache', async () => {
+  const page = await context.newPage();
+  let lists = 0, continuations = 0;
+  const channel = (id, handle, name) => ({ channelRenderer: { channelId: id, title: { simpleText: name }, navigationEndpoint: { browseEndpoint: { browseId: id, canonicalBaseUrl: '/@' + handle } } } });
+  await page.addInitScript(() => {
+    window.ytcfg = { get: key => ({ LOGGED_IN: true, DATASYNC_ID: 'test-account', SESSION_INDEX: 0, INNERTUBE_CONTEXT: { client: { clientVersion: 'test-version' } } })[key] };
+  });
+  await page.route('https://www.youtube.com/feed/channels', route => {
+    lists++;
+    return route.fulfill({ contentType: 'text/html', body: 'var ytInitialData = ' + JSON.stringify({ contents: { items: [channel(MW, 'mw', 'MW Informática'), { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: 'next-page' } } } }] } }) + ';' });
+  });
+  await page.route('https://www.youtube.com/youtubei/v1/browse', route => {
+    continuations++;
+    expect(route.request().postDataJSON().continuation).toBe('next-page');
+    return route.fulfill({ json: { onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems: [channel(SAFE, 'livre', 'Canal Livre')] } }] } });
+  });
+  await page.goto('https://www.youtube.com/');
+  await expect(page.locator('#compact .cng-block')).toHaveCount(0);
+  await expect(page.locator('#safe .cng-block')).toHaveCount(0);
+  await expect.poll(() => continuations).toBe(1);
+  await page.evaluate(() => {
+    const card = document.createElement('ytd-playlist-panel-video-renderer'); card.id = 'name-only';
+    card.innerHTML = '<ytd-channel-name><span id="text">Canal Livre</span></ytd-channel-name>';
+    const other = document.createElement('ytd-video-renderer'); other.id = 'not-subscribed';
+    other.innerHTML = '<ytd-channel-name><a href="/@outro">Outro canal</a></ytd-channel-name>';
+    document.querySelector('main').append(card, other);
+  });
+  await expect(page.locator('#not-subscribed .cng-block')).toHaveCount(1);
+  await expect(page.locator('#name-only .cng-block')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('#safe .cng-block')).toHaveCount(0);
+  expect(lists).toBe(1); expect(continuations).toBe(1);
+  await page.evaluate(({ MW }) => document.dispatchEvent(new CustomEvent('yt-subscribe-state-changed', { detail: { channelId: MW, subscribed: false } })), { MW });
+  await expect(page.locator('#compact .cng-block')).toHaveCount(1);
+  await expect(page.locator('#safe .cng-block')).toHaveCount(0);
+  await page.evaluate(() => {
+    window.ytcfg = { get: key => key === 'LOGGED_IN' ? false : undefined };
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+  });
+  await expect(page.locator('#safe .cng-block')).toHaveCount(1);
+});
+
+test('falha na lista não inventa inscrições nem sobrescreve cancelamento recebido durante a consulta', async () => {
+  const page = await newYoutube();
+  let complete;
+  const responseReady = new Promise(resolve => { complete = resolve; });
+  await page.route('https://www.youtube.com/feed/channels', async route => {
+    await responseReady;
+    await route.fulfill({ contentType: 'text/html', body: 'var ytInitialData = ' + JSON.stringify({ contents: { items: [{ channelRenderer: { channelId: MW, title: { simpleText: 'MW Informática' }, navigationEndpoint: { browseEndpoint: { browseId: MW, canonicalBaseUrl: '/@mw' } } } }] } }) + ';' });
+  });
+  await page.evaluate(({ MW }) => {
+    window.ytcfg = { get: key => ({ LOGGED_IN: true, DATASYNC_ID: 'test-account' })[key] };
+    document.dispatchEvent(new Event('yt-page-data-updated'));
+    document.dispatchEvent(new CustomEvent('yt-subscribe-state-changed', { detail: { channelId: MW, subscribed: false } }));
+  }, { MW });
+  complete();
+  await expect.poll(() => page.evaluate(() => !!sessionStorage.getItem('cng:subscriptions:v1'))).toBe(true);
+  await expect(page.locator('#compact .cng-block')).toHaveCount(1);
+  await expect(page.locator('#safe .cng-block')).toHaveCount(1);
+  await page.route('https://www.youtube.com/feed/channels', route => route.fulfill({ status: 503, body: 'Unavailable' }));
+  await page.evaluate(() => {
+    window.ytcfg = { get: key => ({ LOGGED_IN: true, DATASYNC_ID: 'other-account' })[key] };
+    document.dispatchEvent(new Event('yt-page-data-updated'));
+  });
+  await expect(page.locator('#compact .cng-block')).toHaveCount(1);
+});
+
+test('mudança de inscrição atualiza outras abas da mesma conta sem misturar contas diferentes', async () => {
+  await context.addInitScript(() => {
+    window.ytcfg = { get: key => ({ LOGGED_IN: true, DATASYNC_ID: 'account-one' })[key] };
+  });
+  await context.route('https://www.youtube.com/feed/channels', route => route.fulfill({ contentType: 'text/html', body: 'var ytInitialData = ' + JSON.stringify({ contents: { items: [{ channelRenderer: { channelId: MW, title: { simpleText: 'MW Informática' }, navigationEndpoint: { browseEndpoint: { browseId: MW, canonicalBaseUrl: '/@mw' } } } }] } }) + ';' }));
+  const first = await context.newPage(), second = await context.newPage();
+  await first.goto('https://www.youtube.com/'); await second.goto('https://www.youtube.com/');
+  for (const page of [first, second]) {
+    await expect(page.locator('#compact .cng-block')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => !!sessionStorage.getItem('cng:subscriptions:v1'))).toBe(true);
+  }
+  await first.evaluate(({ MW }) => document.dispatchEvent(new CustomEvent('yt-subscribe-state-changed', { detail: { channelId: MW, subscribed: false } })), { MW });
+  await expect(second.locator('#compact .cng-block')).toHaveCount(1);
+  await second.evaluate(() => {
+    window.ytcfg = { get: key => ({ LOGGED_IN: true, DATASYNC_ID: 'account-two' })[key] };
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+  });
+  await expect(second.locator('#compact .cng-block')).toHaveCount(0);
+  await first.evaluate(({ MW }) => document.dispatchEvent(new CustomEvent('yt-subscribe-state-changed', { detail: { channelId: MW, subscribed: false } })), { MW });
+  await expect(second.locator('#compact .cng-block')).toHaveCount(0);
+  await expect(second.locator('#safe .cng-block')).toHaveCount(1);
+});

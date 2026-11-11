@@ -172,6 +172,29 @@
     }
     return result;
   }
+  // Only call for /feed/channels responses. The guide can contain just a small
+  // subset of subscriptions; channel cards in this feed are the actual list.
+  function subscriptionPage(data) {
+    const queue = [data?.contents, data?.continuationContents, data?.onResponseReceivedActions, data?.onResponseReceivedEndpoints];
+    const seen = new WeakSet(), channels = new Map(), continuations = new Set();
+    for (let i = 0; i < queue.length && i < 120000; i++) {
+      const node = queue[i];
+      if (!node || typeof node !== "object" || seen.has(node)) continue;
+      seen.add(node);
+      const renderer = node.channelRenderer || node.gridChannelRenderer;
+      if (renderer) {
+        const endpoint = channelFromText(renderer.navigationEndpoint);
+        const owner = identity({ channelId: renderer.channelId || endpoint.channelId, path: endpoint.path, name: textOf(renderer.title) });
+        if (owner.channelId) channels.set(owner.channelId, owner);
+        // Subscription menus have unrelated endpoints; do not traverse them.
+        continue;
+      }
+      const continuation = node.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token || node.nextContinuationData?.continuation;
+      if (typeof continuation === "string" && continuation.length < 20000) continuations.add(continuation);
+      for (const child of Object.values(node)) if (child && typeof child === "object") queue.push(child);
+    }
+    return { channels: [...channels.values()], continuations: [...continuations] };
+  }
   // Extract a balanced JSON object, without evaluating any page JavaScript.
   function jsonAfter(source, marker) {
     const index = source.indexOf(marker);
@@ -193,7 +216,7 @@
     }
     return null;
   }
-  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, subscriptionEntries, jsonAfter });
+  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, subscriptionEntries, subscriptionPage, jsonAfter });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else globalThis.CNGCore = api;
 })();

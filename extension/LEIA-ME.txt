@@ -14,4 +14,4 @@ Os dados ficam somente neste navegador. Exporte um backup antes de
 desinstalar. O filtro depende dos formatos do YouTube e pode precisar
 de atualização se o site mudar. Mantenha esta pasta no mesmo lugar.
 
-Extensão local — versão 1.0.4.
+Extensão local — versão 1.0.5.
