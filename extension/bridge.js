@@ -142,6 +142,36 @@
     }
     return [...result];
   }
+  // Subscription state is read from YouTube's own data, never inferred from a name.
+  function subscriptionEntries(data) {
+    const queue = [data], seen = new WeakSet(), result = [];
+    for (let i = 0; i < queue.length && i < 60000; i++) {
+      const node = queue[i];
+      if (!node || typeof node !== "object" || seen.has(node)) continue;
+      seen.add(node);
+      const button = node.subscribeButtonRenderer || node.subscribeButtonViewModel || node.subscriptionButtonViewModel;
+      if (button && typeof button.subscribed === "boolean") {
+        const owner = identity({ channelId: button.channelId });
+        if (owner.channelId) result.push([owner, button.subscribed]);
+      }
+      if (typeof node.subscribed === "boolean" && CHANNEL_ID.test(node.channelId)) result.push([identity(node), node.subscribed]);
+      const section = node.guideSubscriptionsSectionRenderer || (node.guideSectionRenderer && /^(inscricoes|subscriptions)$/.test(nameKey(textOf(node.guideSectionRenderer.title))) ? node.guideSectionRenderer : null);
+      if (section) {
+        const entries = [section];
+        for (let j = 0; j < entries.length && j < 10000; j++) {
+          const entry = entries[j];
+          if (!entry || typeof entry !== "object") continue;
+          if (entry.guideEntryRenderer) {
+            const owner = channelFromText(entry.guideEntryRenderer);
+            if (owner.channelId || owner.path) result.push([owner, true]);
+          }
+          for (const child of Object.values(entry)) if (child && typeof child === "object") entries.push(child);
+        }
+      }
+      for (const child of Object.values(node)) if (child && typeof child === "object") queue.push(child);
+    }
+    return result;
+  }
   // Extract a balanced JSON object, without evaluating any page JavaScript.
   function jsonAfter(source, marker) {
     const index = source.indexOf(marker);
@@ -163,7 +193,7 @@
     }
     return null;
   }
-  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, jsonAfter });
+  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, subscriptionEntries, jsonAfter });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else globalThis.CNGCore = api;
 })();
@@ -174,12 +204,14 @@
   if (globalThis.__cngBridgeInstalled) return;
   globalThis.__cngBridgeInstalled = true;
   const C = globalThis.CNGCore;
+  const subscriptionChanges = new Map();
   let scheduled = false;
   function publish(data) {
     const videos = C.videoEntries(data);
+    const subscriptions = C.subscriptionEntries(data).filter(([owner, subscribed]) => !subscriptionChanges.has(owner.channelId) || subscriptionChanges.get(owner.channelId) === subscribed);
     const metadata = data?.metadata?.channelMetadataRenderer;
     const channel = metadata ? C.identity({ channelId: metadata.externalId, path: metadata.vanityChannelUrl || metadata.channelUrl, name: metadata.title }) : null;
-    if (videos.length || channel) document.dispatchEvent(new CustomEvent("cng:metadata", { detail: JSON.stringify({ videos, channel }) }));
+    if (videos.length || channel || subscriptions.length) document.dispatchEvent(new CustomEvent("cng:metadata", { detail: JSON.stringify({ videos, channel, subscriptions }) }));
   }
   function collect(event) {
     if (event?.detail?.response) publish(event.detail.response);
@@ -187,8 +219,11 @@
     scheduled = true;
     setTimeout(() => {
       scheduled = false;
-      for (const data of [window.ytInitialData, window.ytInitialPlayerResponse, document.querySelector("ytd-app")?.data, document.querySelector("ytd-watch-flexy")?.playerData]) {
+      for (const data of [window.ytInitialData, window.ytInitialPlayerResponse, document.querySelector("ytd-app")?.data, document.querySelector("ytd-watch-flexy")?.playerData, document.querySelector("ytd-guide-renderer")?.data]) {
         if (data) publish(data);
+      }
+      for (const section of document.querySelectorAll("ytd-guide-section-renderer,ytd-guide-subscriptions-section-renderer")) {
+        if (section.data) publish(section.matches("ytd-guide-subscriptions-section-renderer") ? { guideSubscriptionsSectionRenderer: section.data } : { guideSectionRenderer: section.data });
       }
     }, 40);
   }
@@ -197,9 +232,13 @@
     if (typeof token !== "string" || !/^cng-\d+$/.test(token)) return;
     const node = document.querySelector(`[data-cng-probe="${token}"]`);
     if (!node) return;
-    for (const el of [node, ...node.querySelectorAll("yt-lockup-view-model,ytd-rich-grid-media,ytd-video-renderer,ytd-reel-video-renderer,ytm-shorts-lockup-view-model,yt-shorts-lockup-view-model")]) {
+    for (const el of [node, ...node.querySelectorAll("yt-lockup-view-model,ytd-rich-grid-media,ytd-video-renderer,ytd-reel-video-renderer,ytm-shorts-lockup-view-model,yt-shorts-lockup-view-model,ytd-subscribe-button-renderer")]) {
       if (el.data) publish(el.data);
     }
+  });
+  document.addEventListener("yt-subscribe-state-changed", event => {
+    const { channelId, subscribed } = event.detail || {};
+    if (C.CHANNEL_ID.test(channelId) && typeof subscribed === "boolean") { subscriptionChanges.set(channelId, subscribed); publish({ channelId, subscribed }); }
   });
   for (const name of ["yt-page-data-updated", "yt-navigate-finish", "yt-player-updated", "DOMContentLoaded", "cng:ready"]) document.addEventListener(name, collect);
 })();

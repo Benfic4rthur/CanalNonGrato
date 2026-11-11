@@ -1,6 +1,6 @@
 {
   "name": "canalnongrato",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Extensão leve para Edge que filtra canais do YouTube.",
   "scripts": {
     "build": "node scripts/build.mjs",

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CanalNonGrato",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Seu YouTube, do seu jeito. Bloqueie canais nas recomendações, pesquisas, Shorts e vídeos.",
   "minimum_chrome_version": "111",
   "permissions": ["storage", "scripting"],

@@ -36,7 +36,50 @@
   const videos = new Map(), requests = new Map(), failed = new Map(), waiting = new Map();
   const observed = new WeakSet();
   const buttons = new WeakMap();
+  const inspected = new WeakMap(), subscriptions = new Map(), subscriptionAliases = new Map();
+  let subscriptionScan = false;
   let io;
+
+  function subscriptionKeys(owner) {
+    return [owner.channelId && "id:" + owner.channelId, owner.path && "path:" + C.normalize(owner.path)].filter(Boolean);
+  }
+  function learnSubscription(owner, subscribed) {
+    let changed = false;
+    const keys = subscriptionKeys(owner), id = owner.channelId && "id:" + owner.channelId;
+    if (id) {
+      if (!subscriptionAliases.has(id)) subscriptionAliases.set(id, new Set());
+      for (const key of keys) subscriptionAliases.get(id).add(key);
+      keys.push(...subscriptionAliases.get(id));
+    }
+    for (const key of keys) {
+      if (subscriptions.get(key) !== subscribed) { subscriptions.set(key, subscribed); changed = true; }
+    }
+    if (changed && !subscriptionScan) {
+      subscriptionScan = true;
+      queueMicrotask(() => { subscriptionScan = false; if (!disposed && ready) scan(); });
+    }
+  }
+  function subscriptionState(root) {
+    const controls = root.querySelectorAll("ytd-subscribe-button-renderer,yt-subscribe-button-view-model,yt-subscription-notification-toggle-button-renderer");
+    for (const control of controls) {
+      if (control.closest("[hidden]")) continue;
+      if (control.matches("yt-subscription-notification-toggle-button-renderer")) return true;
+      if (control.hasAttribute("subscribed")) return control.getAttribute("subscribed") !== "false";
+      const label = C.nameKey(control.textContent);
+      if (/^(inscrito|inscrita|subscribed|unsubscribe|cancelar inscricao)\b/.test(label)) return true;
+      if (/^(inscrever-se|subscribe)\b/.test(label)) return false;
+    }
+    return undefined;
+  }
+  function isSubscribed(root, owner) {
+    const state = subscriptionState(root);
+    if (typeof state === "boolean") learnSubscription(owner, state);
+    const keys = subscriptionKeys(owner);
+    const known = keys.find(key => subscriptions.has(key));
+    const subscribed = state ?? (known ? subscriptions.get(known) : false);
+    if (known && owner.channelId && owner.path) learnSubscription(owner, subscribed);
+    return subscribed;
+  }
 
   async function rpc(message) {
     const response = await chrome.runtime.sendMessage(message);
@@ -173,7 +216,9 @@
     // Nested reels in a Shorts shelf must remain individually filterable.
     if (root.matches("ytd-rich-item-renderer") && root.querySelector("ytd-rich-shelf-renderer")) return;
     let { videoId, owner } = ownerOf(root);
-    if (videoId && !owner.channelId && !owner.path) {
+    const probeKey = videoId + "|" + owner.channelId + "|" + owner.path;
+    if (inspected.get(root) !== probeKey) {
+      inspected.set(root, probeKey);
       inspect(root);
       owner = C.merge(owner, videos.get(videoId));
     }
@@ -193,6 +238,7 @@
   }
   function addButton(root, owner, label = false) {
     let button = buttons.get(root);
+    if (isSubscribed(root, owner)) { button?.remove(); return; }
     if (!button) {
       button = document.createElement("button");
       button.type = "button";
@@ -218,6 +264,7 @@
             if (resolved) current = C.merge(current, resolved);
           }
           if (!C.hasIdentity(current)) throw new Error("Não consegui identificar o canal. Tente abrir o vídeo e bloquear por lá.");
+          if (isSubscribed(root, current)) { button.remove(); return; }
           const rule = await rpc({ type: "block", channel: current });
           rules = [...rules.filter(r => r.id !== rule.id), rule];
           findBlocked = C.matcher(rules);
@@ -312,6 +359,11 @@
     const generation = pageGeneration, href = location.href;
     const videoId = C.videoIdFromUrl(href);
     let owner = pageOwner();
+    if (!videoId) {
+      const header = document.querySelector("ytd-page-header-renderer,yt-page-header-renderer,ytd-c4-tabbed-header-renderer");
+      const state = header && subscriptionState(header);
+      if (typeof state === "boolean") learnSubscription(owner, state);
+    }
     pageVerifying = Boolean(rules.length && videoId && !C.hasIdentity(owner) && !(failed.get(videoId) > Date.now()));
     document.documentElement?.toggleAttribute("data-cng-verifying", pageVerifying);
     if (pageVerifying) pauseMedia();
@@ -338,6 +390,9 @@
       for (const entry of (payload.videos || []).slice(0, 2000)) {
         if (Array.isArray(entry)) remember(entry[0], C.identity(entry[1]));
       }
+      for (const entry of (payload.subscriptions || []).slice(0, 10000)) {
+        if (Array.isArray(entry) && typeof entry[1] === "boolean") learnSubscription(C.identity(entry[0]), entry[1]);
+      }
       if (ready) scan();
     } catch { /* Ignore unrelated or malformed page events. */ }
   }, { signal: lifecycle.signal });
@@ -352,7 +407,11 @@
         collect(added);
         if (added.nodeType === 1 && (added.matches(PAGE_OWNERS) || added.querySelector(PAGE_OWNERS))) pageChanged = true;
       }
-      if (element?.closest(PAGE_OWNERS + ",ytd-page-header-renderer")) pageChanged = true;
+      if (element?.closest(PAGE_OWNERS + ",ytd-page-header-renderer,yt-page-header-renderer,ytd-c4-tabbed-header-renderer")) {
+        pageChanged = true;
+        const owner = pageOwner(), state = subscriptionState(element.closest("ytd-page-header-renderer,yt-page-header-renderer,ytd-c4-tabbed-header-renderer") || watchActionsRoot() || element);
+        if (typeof state === "boolean") learnSubscription(owner, state);
+      }
     }
     if (pageChanged) checkPage();
   });
@@ -363,7 +422,7 @@
       if (rules.length && videoId && !owner.channelId && !owner.path) requestVideo(videoId, entry.target);
     }
   }, { rootMargin: "160px" });
-  observer.observe(document, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["href", "video-id", "is-active"] });
+  observer.observe(document, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["href", "video-id", "is-active", "subscribed", "aria-label", "aria-pressed"] });
   document.addEventListener("play", pauseMedia, { capture: true, signal: lifecycle.signal });
   document.addEventListener("yt-navigate-start", () => { pageGeneration++; channelPage = null; pageVerifying = false; document.documentElement?.removeAttribute("data-cng-verifying"); pending.clear(); clearGate(); }, { signal: lifecycle.signal });
   for (const event of ["yt-navigate-finish", "yt-page-data-updated", "DOMContentLoaded", "popstate"]) {

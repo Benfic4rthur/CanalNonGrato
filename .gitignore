@@ -10,3 +10,4 @@ site-canalnongrato/
 *.key
 dist/*
 !dist/CanalNonGrato-1.0.3.zip
+!dist/CanalNonGrato-1.0.4.zip

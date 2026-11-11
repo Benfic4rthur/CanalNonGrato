@@ -142,6 +142,36 @@
     }
     return [...result];
   }
+  // Subscription state is read from YouTube's own data, never inferred from a name.
+  function subscriptionEntries(data) {
+    const queue = [data], seen = new WeakSet(), result = [];
+    for (let i = 0; i < queue.length && i < 60000; i++) {
+      const node = queue[i];
+      if (!node || typeof node !== "object" || seen.has(node)) continue;
+      seen.add(node);
+      const button = node.subscribeButtonRenderer || node.subscribeButtonViewModel || node.subscriptionButtonViewModel;
+      if (button && typeof button.subscribed === "boolean") {
+        const owner = identity({ channelId: button.channelId });
+        if (owner.channelId) result.push([owner, button.subscribed]);
+      }
+      if (typeof node.subscribed === "boolean" && CHANNEL_ID.test(node.channelId)) result.push([identity(node), node.subscribed]);
+      const section = node.guideSubscriptionsSectionRenderer || (node.guideSectionRenderer && /^(inscricoes|subscriptions)$/.test(nameKey(textOf(node.guideSectionRenderer.title))) ? node.guideSectionRenderer : null);
+      if (section) {
+        const entries = [section];
+        for (let j = 0; j < entries.length && j < 10000; j++) {
+          const entry = entries[j];
+          if (!entry || typeof entry !== "object") continue;
+          if (entry.guideEntryRenderer) {
+            const owner = channelFromText(entry.guideEntryRenderer);
+            if (owner.channelId || owner.path) result.push([owner, true]);
+          }
+          for (const child of Object.values(entry)) if (child && typeof child === "object") entries.push(child);
+        }
+      }
+      for (const child of Object.values(node)) if (child && typeof child === "object") queue.push(child);
+    }
+    return result;
+  }
   // Extract a balanced JSON object, without evaluating any page JavaScript.
   function jsonAfter(source, marker) {
     const index = source.indexOf(marker);
@@ -163,7 +193,7 @@
     }
     return null;
   }
-  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, jsonAfter });
+  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, subscriptionEntries, jsonAfter });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else globalThis.CNGCore = api;
 })();

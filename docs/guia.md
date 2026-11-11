@@ -19,6 +19,14 @@ Nomes digitados sozinhos são comparados por nome exato, ignorando caixa, espaç
 
 ## Gerenciar a lista
 
+### Canais em que você é inscrito
+
+O botão de bloqueio é ocultado quando o YouTube informa que você já é inscrito no canal. A extensão usa os dados de inscrição presentes na página, no guia de inscrições e nos controles de Inscrito, sem consultar cada canal pela rede. Ao receber uma mudança de inscrição, atualiza os botões da aba.
+
+Isso evita os botões junto ao autor e nos cartões do canal identificado como inscrito. O gerenciamento manual da lista de bloqueados continua disponível no painel; a mudança não apaga bloqueios que você já tenha criado.
+
+### Buscar, desbloquear e abrir o painel
+
 Abra o ícone do CanalNonGrato no navegador. A lista mostra o nome e a foto do canal; iniciais aparecem enquanto a imagem carrega ou quando não é possível obtê-la. Use a busca para encontrar um canal e **Desbloquear** para permitir que volte a aparecer.
 
 **Abrir painel** leva à página maior de gerenciamento. O aviso de uma ação permite desfazer enquanto estiver visível.

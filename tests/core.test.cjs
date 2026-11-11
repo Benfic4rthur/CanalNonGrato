@@ -63,3 +63,18 @@ test('fotos só usam hosts do YouTube, preservam o perfil e pedem miniatura pequ
   assert.equal(C.merge(owner, { name: 'Novo nome' }).avatarUrl, owner.avatarUrl);
   assert.equal(C.avatarFrom([{ url: 'https://yt3.ggpht.com/photo=s900-c-k', width: 900 }]), owner.avatarUrl);
 });
+
+test('inscrições usam IDs explícitos e a seção de inscrições, nunca nomes ou recomendações', () => {
+  const entries = C.subscriptionEntries({
+    items: [
+      { subscribeButtonRenderer: { channelId: id, subscribed: true } },
+      { subscribeButtonViewModel: { channelId: other, subscribed: false } },
+      { guideSubscriptionsSectionRenderer: { items: [{ guideEntryRenderer: { navigationEndpoint: { browseEndpoint: { browseId: id, canonicalBaseUrl: '/@mw' } } } }] } },
+      { channelRenderer: { channelId: other, title: { simpleText: 'MW Informática' } } }
+    ]
+  });
+  assert(entries.some(([owner, value]) => owner.channelId === id && value === true));
+  assert(entries.some(([owner, value]) => owner.channelId === other && value === false));
+  assert(!entries.some(([owner, value]) => owner.channelId === other && value === true));
+  assert.deepEqual(C.subscriptionEntries({ subscribeButtonRenderer: { channelId: 'bad', subscribed: true } }), []);
+});

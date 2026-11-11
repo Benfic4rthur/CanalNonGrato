@@ -292,3 +292,50 @@ test('capturas da interface desktop e popup', async () => {
   await expect(page.locator('.empty')).toBeVisible();
   await page.screenshot({ path: 'artifacts/popup-vazio.png', fullPage: true });
 });
+
+test('inscrições do guia ocultam botões nas listas e mudanças de inscrição são imediatas', async () => {
+  const page = await newYoutube();
+  await page.evaluate(({ MW }) => {
+    window.ytInitialData.subscriptions = { guideSubscriptionsSectionRenderer: { items: [{ guideEntryRenderer: { navigationEndpoint: { browseEndpoint: { browseId: MW, canonicalBaseUrl: '/@mw' } } } }] } };
+    document.dispatchEvent(new Event('yt-page-data-updated'));
+  }, { MW });
+  await expect(page.locator('#compact .cng-block')).toHaveCount(0);
+  await expect(page.locator('#modern .cng-block')).toHaveCount(0);
+  await expect(page.locator('#channel-result .cng-block')).toHaveCount(0);
+  await expect(page.locator('#safe .cng-block')).toHaveCount(1);
+  await page.evaluate(({ MW }) => {
+    document.dispatchEvent(new CustomEvent('yt-subscribe-state-changed', { detail: { channelId: MW, subscribed: false } }));
+    document.dispatchEvent(new Event('yt-page-data-updated'));
+  }, { MW });
+  await expect(page.locator('#compact .cng-block')).toHaveCount(1);
+  await page.evaluate(({ MW }) => document.dispatchEvent(new CustomEvent('yt-subscribe-state-changed', { detail: { channelId: MW, subscribed: true } })), { MW });
+  await expect(page.locator('#compact .cng-block')).toHaveCount(0);
+});
+
+test('Inscrito embaixo do vídeo oculta o botão e restaura ao cancelar a inscrição', async () => {
+  const page = await newYoutube('https://www.youtube.com/watch?v=mwVideo0001');
+  await page.evaluate(() => {
+    const subscribe = document.createElement('ytd-subscribe-button-renderer');
+    subscribe.setAttribute('subscribed', ''); subscribe.textContent = 'Inscrito';
+    document.querySelector('ytd-video-owner-renderer').append(subscribe);
+  });
+  await expect(page.locator('ytd-video-owner-renderer .cng-block')).toHaveCount(0);
+  await expect(page.locator('#compact .cng-block')).toHaveCount(0);
+  await page.evaluate(() => {
+    const subscribe = document.querySelector('ytd-subscribe-button-renderer');
+    subscribe.removeAttribute('subscribed'); subscribe.textContent = 'Inscrever-se';
+  });
+  await expect(page.locator('ytd-video-owner-renderer .cng-block')).toHaveCount(1);
+  await expect(page.locator('#compact .cng-block')).toHaveCount(1);
+});
+
+test('página de canal inscrito filtra os botões dos vídeos do próprio canal', async () => {
+  const page = await newYoutube('https://www.youtube.com/@mw/videos');
+  await page.evaluate(() => {
+    const subscribe = document.createElement('ytd-subscribe-button-renderer');
+    subscribe.setAttribute('subscribed', ''); subscribe.textContent = 'Inscrito';
+    document.querySelector('ytd-page-header-renderer').append(subscribe);
+  });
+  await expect(page.locator('#compact .cng-block')).toHaveCount(0);
+  await expect(page.locator('#safe .cng-block')).toHaveCount(1);
+});
