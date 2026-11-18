@@ -429,3 +429,127 @@ test('mudança de inscrição atualiza outras abas da mesma conta sem misturar c
   await expect(second.locator('#compact .cng-block')).toHaveCount(0);
   await expect(second.locator('#safe .cng-block')).toHaveCount(1);
 });
+
+async function cleanupFixture({ subscribed = false, failRemove = false, failUnsubscribe = false, pageSize = 50 } = {}) {
+  const server = { subscribed, removed: [], unsubscribes: 0, failRemove, failUnsubscribe, entries: [
+    { videoId: 'mwVideo0001', setVideoId: 'set-current', channelId: MW, name: 'MW Informática', handle: 'mw' },
+    { videoId: 'safeVideo01', setVideoId: 'set-other', channelId: SAFE, name: 'MW Informática', handle: 'livre' },
+    { videoId: 'mwModern001', setVideoId: 'set-later', channelId: MW, name: 'MW Informática', handle: 'mw' },
+  ] };
+  const row = entry => ({ videoId: entry.videoId, setVideoId: entry.setVideoId, shortBylineText: byline(entry.channelId, entry.name, entry.handle) });
+  const items = entries => entries.map(entry => ({ playlistVideoRenderer: row(entry) }));
+  const payload = () => ({ contents: { playlistVideoListRenderer: { contents: [ ...items(server.entries.slice(0, pageSize)), ...(server.entries.length > pageSize ? [{ continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: 'remaining' } } } }] : []) ] } } });
+  const page = await context.newPage();
+  await page.route('https://www.youtube.com/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/youtubei/v1/browse/edit_playlist') {
+      const edit = route.request().postDataJSON().playlistEditEndpoint;
+      expect(edit.playlistId).toBe('WL'); expect(edit.actions).toHaveLength(1);
+      expect(edit.actions[0].action).toBe('ACTION_REMOVE_VIDEO');
+      if (server.failRemove) return route.fulfill({ json: { status: 'STATUS_FAILED' } });
+      const setId = edit.actions[0].setVideoId;
+      server.removed.push(setId); server.entries = server.entries.filter(entry => entry.setVideoId !== setId);
+      return route.fulfill({ json: { status: 'STATUS_SUCCEEDED' } });
+    }
+    if (url.pathname === '/youtubei/v1/subscription/unsubscribe') {
+      const endpoint = route.request().postDataJSON().unsubscribeEndpoint;
+      expect(endpoint.channelIds).toEqual([MW]); server.unsubscribes++;
+      if (server.failUnsubscribe) return route.fulfill({ json: { error: { code: 500 } } });
+      server.subscribed = false;
+      return route.fulfill({ json: { actions: [{ updateSubscribeButtonAction: { channelId: MW, subscribed: false } }] } });
+    }
+    if (url.pathname === '/youtubei/v1/browse') return route.fulfill({ json: { onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems: items(server.entries) } }] } });
+    if (url.pathname === '/playlist' && !route.request().isNavigationRequest()) return route.fulfill({ contentType: 'text/html', body: 'var ytInitialData = ' + JSON.stringify(payload()) + ';' });
+    if (url.pathname === '/channel/' + MW) return route.fulfill({ contentType: 'text/html', body: 'var ytInitialData = ' + JSON.stringify({ metadata: { channelMetadataRenderer: { externalId: MW } }, buttons: [{ subscribeButtonViewModel: { channelId: MW, stateEntityStoreKey: 'subscription-state', unsubscribeButtonContent: { commandMetadata: { webCommandMetadata: { apiUrl: '/youtubei/v1/subscription/unsubscribe' } }, unsubscribeEndpoint: { channelIds: [MW], params: 'native-params' } } } }], frameworkUpdates: { entityBatchUpdate: { mutations: [{ payload: { subscriptionStateEntity: { key: 'subscription-state', subscribed: server.subscribed } } }] } } }) + ';' });
+    if (url.pathname === '/feed/channels') return route.fulfill({ contentType: 'text/html', body: 'var ytInitialData = {"contents":{"items":[]}};' });
+    const script = `<script>
+      window.ytcfg={get:key=>({LOGGED_IN:true,DATASYNC_ID:'cleanup-account'})[key]};
+      window.cleanupNativeEnabled=true;
+      document.addEventListener('yt-action',event=>{
+        if(event.detail?.actionName!=='yt-service-request'||!window.cleanupNativeEnabled)return;
+        const endpoint=event.detail.args[1], path=endpoint.commandMetadata?.webCommandMetadata?.apiUrl;
+        if(!path)return;
+        event.detail.returnValue.push({ajaxPromise:fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(endpoint)}).then(r=>r.json()).then(data=>({data}))});
+      });
+      const panel=document.createElement('ytd-playlist-panel-renderer');panel.id='cleanup-panel';
+      panel.data={playlistId:'WL'};
+      for(const data of ${JSON.stringify(server.entries.map(row))}){
+        const row=document.createElement('ytd-playlist-panel-video-renderer');row.data={...data,playlistSetVideoId:data.setVideoId};row.dataset.setId=data.setVideoId;
+        row.innerHTML='<a href="/watch?v='+data.videoId+'">Vídeo salvo</a><ytd-channel-name><a href="/channel/'+data.shortBylineText.runs[0].navigationEndpoint.browseEndpoint.browseId+'">'+data.shortBylineText.runs[0].text+'</a></ytd-channel-name>';
+        panel.append(row);
+      }
+      if(new URL(location.href).searchParams.get('list')==='WL')document.querySelector('ytd-app').append(panel);
+    </script>`;
+    return route.fulfill({ contentType: 'text/html', body: fixture(url.pathname, url.searchParams.get('v')) + script });
+  });
+  await page.goto('https://www.youtube.com/watch?v=mwVideo0001&list=WL');
+  await expect(page.locator('#compact .cng-block')).toBeAttached();
+  return { page, server };
+}
+
+test('bloquear remove de verdade os vídeos do canal do Assistir mais tarde, inclusive o atual, sem atingir homônimos', async () => {
+  const { page, server } = await cleanupFixture();
+  await page.locator('#compact .cng-block').click();
+  await expect.poll(() => server.removed.length).toBe(2);
+  await expect(page.locator('#cleanup-panel [data-set-id="set-current"]')).toHaveCount(0);
+  await expect(page.locator('#cleanup-panel [data-set-id="set-later"]')).toHaveCount(0);
+  expect(server.entries.map(entry => entry.setVideoId)).toEqual(['set-other']);
+  expect(server.unsubscribes).toBe(0);
+  await expect(page.locator('#cng-toast')).toContainText('2 vídeo(s) removido(s)');
+  await page.reload();
+  await expect(page.locator('#cleanup-panel [data-set-id="set-current"]')).toHaveCount(0);
+  await expect(page.locator('#cleanup-panel [data-set-id="set-other"]')).toHaveCount(1);
+});
+
+test('bloquear pelo painel cancela inscrição e remove itens que estão nas próximas páginas da lista', async () => {
+  const { page, server } = await cleanupFixture({ subscribed: true, pageSize: 1 });
+  // No loaded playlist rows: membership and continuations must come from YouTube.
+  await page.evaluate(() => { document.querySelector('#cleanup-panel').remove(); history.replaceState({}, '', '/watch?v=mwVideo0001'); });
+  await rpc('block', { channel: { channelId: MW, path: '/@mw', name: 'MW Informática' } });
+  await expect.poll(() => server.removed.length).toBe(2);
+  await expect.poll(() => server.subscribed).toBe(false);
+  expect(server.unsubscribes).toBe(1);
+  expect(server.entries.map(entry => entry.channelId)).toEqual([SAFE]);
+  await expect(page.locator('#cng-toast')).toContainText('Inscrição cancelada');
+  const rules = (await control.evaluate(() => chrome.storage.local.get('blockedChannels'))).blockedChannels;
+  await rpc('unblock', { id: rules[0].id });
+  expect(server.subscribed).toBe(false); expect(server.entries).toHaveLength(1);
+});
+
+test('falha de remoção não inventa sucesso e não impede cancelar a inscrição', async () => {
+  const { page, server } = await cleanupFixture({ subscribed: true, failRemove: true });
+  await rpc('block', { channel: { channelId: MW, path: '/@mw', name: 'MW Informática' } });
+  await expect.poll(() => server.unsubscribes).toBe(1);
+  await expect(page.locator('#cng-toast')).toContainText('não confirmou a remoção');
+  expect(server.removed).toEqual([]); expect(server.entries).toHaveLength(3);
+  await expect(page.locator('#cleanup-panel [data-set-id="set-current"]')).toHaveCount(1);
+  await expect(page.locator('#cng-gate')).toBeVisible();
+});
+
+test('falha ao cancelar inscrição mantém os vídeos removidos e avisa sem desfazer o bloqueio', async () => {
+  const { page, server } = await cleanupFixture({ subscribed: true, failUnsubscribe: true });
+  await rpc('block', { channel: { channelId: MW, path: '/@mw', name: 'MW Informática' } });
+  await expect(page.locator('#cng-toast')).toContainText('recusou a atualização');
+  expect(server.subscribed).toBe(true); expect(server.removed).toHaveLength(2);
+  await expect(page.locator('#cng-gate')).toBeVisible();
+});
+
+test('desbloquear enquanto consulta a lista cancela a limpeza antes de qualquer alteração na conta', async () => {
+  const { page, server } = await cleanupFixture({ subscribed: true });
+  await page.evaluate(() => { document.querySelector('#cleanup-panel').remove(); history.replaceState({}, '', '/watch?v=mwVideo0001'); });
+  let release, requested;
+  const paused = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { requested = resolve; });
+  await page.route('https://www.youtube.com/playlist?list=WL', async route => { requested(); await paused; await route.fallback(); });
+  const block = await rpc('block', { channel: { channelId: MW, path: '/@mw', name: 'MW Informática' } });
+  await started;
+  await rpc('unblock', { id: block.value.id });
+  release();
+  // A subsequent explicit block would wait for the queued cleanup. Observe
+  // completion directly so this assertion cannot pass before cancellation.
+  await expect.poll(() => worker.evaluate(async () => {
+    let done = false; cleanupQueue.then(() => { done = true; });
+    await new Promise(resolve => setTimeout(resolve, 10)); return done;
+  })).toBe(true);
+  expect(server.removed).toEqual([]); expect(server.subscribed).toBe(true); expect(server.unsubscribes).toBe(0);
+});

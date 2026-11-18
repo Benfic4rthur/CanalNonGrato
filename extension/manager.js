@@ -25,7 +25,7 @@
       <section class="hero"><div><span class="eyebrow">UM POUCO MAIS DE PAZ NO FEED</span><h1>Menos ruído.<br>Mais do que importa<span class="accent">.</span></h1><p>Escolha quem fica fora do seu YouTube.</p></div><div class="hero-mark" aria-hidden="true"><img src="icons/mark.svg" alt=""></div></section>
       <div class="workspace">
         <section class="add-panel"><div class="section-heading"><span class="section-icon">${svg("plus")}</span><div><h2>Adicionar um canal</h2><p>Bloqueie por @, link ou nome exato.</p></div></div>
-          <form id="add-form"><label class="sr-only" for="channel-input">Canal para bloquear</label><div class="input-row"><input id="channel-input" name="channel" placeholder="@canal ou link do YouTube" autocomplete="off" spellcheck="false" required maxlength="500"><button id="add-button" class="primary" type="submit">${svg("plus")}<span>Bloquear</span></button></div><p class="field-hint">Prefira o @ ou link: o bloqueio acompanha o canal.</p></form>
+          <form id="add-form"><label class="sr-only" for="channel-input">Canal para bloquear</label><div class="input-row"><input id="channel-input" name="channel" placeholder="@canal ou link do YouTube" autocomplete="off" spellcheck="false" required maxlength="500"><button id="add-button" class="primary" type="submit">${svg("plus")}<span>Bloquear</span></button></div><p class="field-hint">Prefira o @ ou link: o bloqueio acompanha o canal. Ao bloquear, removemos os vídeos do Assistir mais tarde e cancelamos a inscrição.</p></form>
           ${full ? `<div class="tip"><span>${svg("block")}</span><p><strong>Viu um canal que não quer ver?</strong>Use o botão de bloqueio no canto do vídeo. Ele desaparece e vem para esta lista.</p></div><div class="coverage"><span class="eyebrow">ONDE O FILTRO ATUA</span><ul><li>${svg("check")} Página inicial e recomendações</li><li>${svg("check")} Vídeos ao lado do player</li><li>${svg("check")} Pesquisa e Shorts</li><li>${svg("check")} Página do canal e links de vídeos</li></ul><p>O filtro atua neste navegador. O YouTube muda com frequência; se algum formato escapar, a extensão pode precisar de atualização.</p></div>` : ""}
         </section>
         <section class="list-panel" aria-labelledby="list-title"><div class="list-heading"><h2 id="list-title">Canais não gratos <span id="count">0</span></h2><span class="list-caption">Você decide.</span></div><div class="search-box">${svg("search")}<label class="sr-only" for="search-input">Buscar na lista de bloqueados</label><input id="search-input" type="search" placeholder="Buscar na sua lista" autocomplete="off"></div><div id="channel-list" role="list" aria-label="Canais bloqueados"></div><div class="list-summary" id="list-summary"></div></section>
@@ -102,9 +102,14 @@
     try {
       const owner = await rpc({ type: "resolveChannel", input: value });
       const rule = await rpc({ type: "block", channel: owner });
-      input.value = ""; feedback(`${rule.name || rule.handle || "Canal"} bloqueado.`);
+      input.value = ""; feedback(`${rule.name || rule.handle || "Canal"} bloqueado. Atualizando o Assistir mais tarde e a inscrição…`);
     } catch (error) { feedback(error.message, null, true); }
     finally { button.disabled = false; button.querySelector("span").textContent = "Bloquear"; }
+  });
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    if (sender.id !== chrome.runtime.id || message?.type !== "cleanupFinished") return;
+    const details = [message.removed ? `${message.removed} vídeo(s) removido(s) do Assistir mais tarde.` : "", message.unsubscribed ? "Inscrição cancelada." : "", ...(message.errors || [])].filter(Boolean).join(" ");
+    if (details) feedback(details, null, Boolean(message.errors?.length));
   });
   document.getElementById("search-input").addEventListener("input", render);
   document.getElementById("open-options")?.addEventListener("click", () => rpc({ type: "openOptions" }));

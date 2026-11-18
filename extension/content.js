@@ -40,6 +40,40 @@
   const subscriptionOwners = new Map(), subscriptionNames = new Map(), subscriptionOwnerPaths = new Map();
   let subscriptionScan = false;
   let io;
+  const cleanups = new Map();
+  document.addEventListener("cng:cleanup-result", event => {
+    if (typeof event.detail !== "string" || event.detail.length > 10000) return;
+    try {
+      const result = JSON.parse(event.detail), job = cleanups.get(result.requestId);
+      if (job) { clearTimeout(job.timer); cleanups.delete(result.requestId); job.resolve(result); }
+    } catch {}
+  }, { signal: lifecycle.signal });
+  function cleanupRequest(message, sender, respond) {
+    if (sender.id !== chrome.runtime.id || message?.type !== "cleanupBlockedChannel" || window.top !== window || disposed) return;
+    const task = (async () => {
+      const stored = await chrome.storage.local.get("blockedChannels");
+      if (disposed || !stored.blockedChannels?.some(rule => rule.id === message.rule?.id)) return { removed: 0, errors: [] };
+      const requestId = crypto.randomUUID();
+      return new Promise(resolve => {
+        const timer = setTimeout(() => {
+          document.dispatchEvent(new CustomEvent("cng:cancel-cleanup", { detail: requestId }));
+          cleanups.delete(requestId); resolve({ removed: 0, errors: ["O YouTube demorou para concluir. Confira o Assistir mais tarde antes de tentar novamente."] });
+        }, 240000);
+        cleanups.set(requestId, { resolve, timer, ruleId: message.rule.id });
+        document.dispatchEvent(new CustomEvent("cng:cleanup", { detail: JSON.stringify({ requestId, rule: message.rule }) }));
+      });
+    })();
+    task.then(result => {
+      if (!disposed && rules.some(rule => rule.id === message.rule.id)) {
+        const detail = [result.removed ? `${result.removed} vídeo(s) removido(s) do Assistir mais tarde.` : "", result.unsubscribed ? "Inscrição cancelada." : ""].filter(Boolean).join(" ");
+        if (result.errors?.length) toast(`Canal bloqueado. ${detail} ${result.errors.join(" ")}`);
+        else if (detail) toast(detail);
+      }
+      respond(result);
+    }, () => respond({ removed: 0, errors: ["Não consegui confirmar o bloqueio para atualizar o YouTube."] }));
+    return true;
+  }
+  chrome.runtime.onMessage.addListener(cleanupRequest);
 
   function subscriptionKeys(owner) {
     return [owner.channelId && "id:" + owner.channelId, owner.path && "path:" + C.normalize(owner.path)].filter(Boolean);
@@ -282,12 +316,11 @@
             if (resolved) current = C.merge(current, resolved);
           }
           if (!C.hasIdentity(current)) throw new Error("Não consegui identificar o canal. Tente abrir o vídeo e bloquear por lá.");
-          if (isSubscribed(root, current)) { button.remove(); return; }
           const rule = await rpc({ type: "block", channel: current });
           rules = [...rules.filter(r => r.id !== rule.id), rule];
           findBlocked = C.matcher(rules);
           scan();
-          toast(`${rule.name || rule.handle || "Canal"} bloqueado.`, { label: "Desfazer", action: () => rpc({ type: "unblock", id: rule.id }) });
+          toast(`${rule.name || rule.handle || "Canal"} bloqueado. Atualizando o Assistir mais tarde e a inscrição…`, { label: "Desbloquear", action: () => rpc({ type: "unblock", id: rule.id }) });
         } catch (error) { toast(error.message); }
         finally { button.disabled = false; }
       }, true);
@@ -308,7 +341,7 @@
         if (button.parentElement !== host) host.append(button);
       } else if (button.parentElement !== root) root.append(button);
     }
-    button.title = "Bloquear " + (owner.name || owner.handle || "canal deste vídeo");
+    button.title = "Bloquear " + (owner.name || owner.handle || "canal deste vídeo") + ", remover os vídeos do Assistir mais tarde e cancelar a inscrição";
     button.setAttribute("aria-label", button.title);
   }
   function toast(message, action) {
@@ -453,6 +486,7 @@
   const onStorageChanged = (changes, area) => {
     if (area !== "local" || !changes.blockedChannels) return;
     rules = changes.blockedChannels.newValue || [];
+    for (const [requestId, job] of cleanups) if (!rules.some(rule => rule.id === job.ruleId)) document.dispatchEvent(new CustomEvent("cng:cancel-cleanup", { detail: requestId }));
     findBlocked = C.matcher(rules);
     scan();
   };
@@ -460,7 +494,10 @@
   document.addEventListener("cng:dispose-content", () => {
     disposed = true; ready = false; lifecycle.abort(); observer.disconnect(); io.disconnect(); pending.clear(); dirtyShelves.clear();
     clearTimeout(toastTimer); clearGate();
+    for (const [requestId, job] of cleanups) { clearTimeout(job.timer); document.dispatchEvent(new CustomEvent("cng:cancel-cleanup", { detail: requestId })); job.resolve({ removed: 0, errors: ["A extensão foi atualizada. Confira sua lista antes de tentar novamente."] }); }
+    cleanups.clear();
     try { chrome.storage.onChanged.removeListener(onStorageChanged); } catch { /* The previous extension context can already be invalidated. */ }
+    try { chrome.runtime.onMessage.removeListener(cleanupRequest); } catch {}
     for (const button of document.querySelectorAll(".cng-block")) if (button.dataset.cngVersion === version) button.remove();
     delete globalThis.__cngContentVersion;
   }, { once: true, signal: lifecycle.signal });

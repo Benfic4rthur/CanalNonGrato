@@ -5,7 +5,7 @@ import sharp from 'sharp';
 const root = path.resolve(import.meta.dirname, '..');
 const { version } = JSON.parse(await fs.readFile(path.join(root, 'extension/manifest.json'), 'utf8'));
 // Chromium deduplicates a script path across content-script worlds. Give MAIN its own bundle.
-await fs.writeFile(path.join(root, 'extension/bridge.js'), (await fs.readFile(path.join(root, 'extension/core.js'), 'utf8')) + '\n' + (await fs.readFile(path.join(root, 'scripts/bridge-main.js'), 'utf8')).replace('__CNG_VERSION__', version));
+await fs.writeFile(path.join(root, 'extension/bridge.js'), (await fs.readFile(path.join(root, 'extension/core.js'), 'utf8')) + '\n' + (await fs.readFile(path.join(root, 'scripts/bridge-main.js'), 'utf8')).replace('__CNG_VERSION__', version) + '\n' + (await fs.readFile(path.join(root, 'scripts/cleanup-main.js'), 'utf8')).replace('__CNG_VERSION__', version));
 for (const size of [16, 32, 48, 128]) {
   await sharp(path.join(root, 'extension/icons/mark.svg')).resize(size, size).png().toFile(path.join(root, `extension/icons/icon-${size}.png`));
 }

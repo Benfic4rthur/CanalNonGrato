@@ -9,9 +9,12 @@ CanalNonGrato — instalação no Microsoft Edge
 Clique no símbolo de bloqueio no canto dos vídeos para bloquear o canal.
 No ícone da extensão, gerencie a lista e desbloqueie quando quiser.
 Prefira @ ou link para identificar o canal com precisão.
+Ao bloquear, os vídeos do canal são removidos do Assistir mais tarde e a
+inscrição é cancelada, quando houver. Desbloquear não desfaz essas ações.
 
-Os dados ficam somente neste navegador. Exporte um backup antes de
+Sua lista de bloqueios fica neste navegador; as remoções e inscrições
+alteram sua conta no próprio YouTube. Exporte um backup antes de
 desinstalar. O filtro depende dos formatos do YouTube e pode precisar
 de atualização se o site mudar. Mantenha esta pasta no mesmo lugar.
 
-Extensão local — versão 1.0.5.
+Extensão local — versão 1.0.6.

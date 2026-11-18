@@ -145,11 +145,15 @@
   // Subscription state is read from YouTube's own data, never inferred from a name.
   function subscriptionEntries(data) {
     const queue = [data], seen = new WeakSet(), result = [];
+    const states = new Map(), models = [];
     for (let i = 0; i < queue.length && i < 60000; i++) {
       const node = queue[i];
       if (!node || typeof node !== "object" || seen.has(node)) continue;
       seen.add(node);
       const button = node.subscribeButtonRenderer || node.subscribeButtonViewModel || node.subscriptionButtonViewModel;
+      const entity = node.subscriptionStateEntity;
+      if (typeof entity?.key === "string" && typeof entity.subscribed === "boolean") states.set(entity.key, entity.subscribed);
+      if (button?.stateEntityStoreKey && CHANNEL_ID.test(button.channelId)) models.push(button);
       if (button && typeof button.subscribed === "boolean") {
         const owner = identity({ channelId: button.channelId });
         if (owner.channelId) result.push([owner, button.subscribed]);
@@ -170,6 +174,7 @@
       }
       for (const child of Object.values(node)) if (child && typeof child === "object") queue.push(child);
     }
+    for (const model of models) if (states.has(model.stateEntityStoreKey)) result.push([identity({ channelId: model.channelId }), states.get(model.stateEntityStoreKey)]);
     return result;
   }
   // Only call for /feed/channels responses. The guide can contain just a small
@@ -195,6 +200,38 @@
     }
     return { channels: [...channels.values()], continuations: [...continuations] };
   }
+  function watchLaterPage(data) {
+    const queue = [data?.contents, data?.continuationContents, data?.onResponseReceivedActions, data?.onResponseReceivedEndpoints];
+    const seen = new WeakSet(), entries = [], continuations = new Set();
+    let recognized = false;
+    for (let i = 0; i < queue.length && i < 120000; i++) {
+      const node = queue[i];
+      if (!node || typeof node !== "object" || seen.has(node)) continue;
+      seen.add(node);
+      // Only playlist contents establish membership, never recommendations.
+      const list = node.playlistVideoListRenderer || node.playlistVideoListContinuation || node.appendContinuationItemsAction || node.reloadContinuationItemsCommand;
+      if (list) {
+        if (list.playlistId && list.playlistId !== "WL") continue;
+        recognized = true;
+        queue.push({ cngPlaylistContents: list.contents || list.continuationItems || [], continuations: list.continuations });
+        continue;
+      }
+      if (node.cngPlaylistContents) {
+        for (const item of node.cngPlaylistContents) {
+          const row = item.playlistVideoRenderer;
+          const setVideoId = row?.setVideoId || row?.playlistSetVideoId;
+          if (VIDEO_ID.test(row?.videoId) && typeof setVideoId === "string" && setVideoId.length > 0 && setVideoId.length < 500) entries.push({ videoId: row.videoId, setVideoId, owner: rendererIdentity(row) });
+          const token = item.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token;
+          if (typeof token === "string" && token.length < 20000) continuations.add(token);
+        }
+      }
+      const token = node.nextContinuationData?.continuation;
+      if (typeof token === "string" && token.length < 20000) continuations.add(token);
+      // Do not recursively mistake menu commands or another shelf for entries.
+      for (const [key, child] of Object.entries(node)) if (key !== "cngPlaylistContents" && child && typeof child === "object") queue.push(child);
+    }
+    return { recognized, entries, continuations: [...continuations] };
+  }
   // Extract a balanced JSON object, without evaluating any page JavaScript.
   function jsonAfter(source, marker) {
     const index = source.indexOf(marker);
@@ -216,7 +253,7 @@
     }
     return null;
   }
-  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, subscriptionEntries, subscriptionPage, jsonAfter });
+  const api = Object.freeze({ VIDEO_ID, CHANNEL_ID, clean, normalize, nameKey, avatarUrl, avatarFrom, channelPath, identity, hasIdentity, matches, matcher, merge, textOf, rendererIdentity, videoIdFromUrl, videoEntries, subscriptionEntries, subscriptionPage, watchLaterPage, jsonAfter });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else globalThis.CNGCore = api;
 })();

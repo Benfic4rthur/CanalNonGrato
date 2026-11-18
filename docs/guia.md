@@ -27,6 +27,14 @@ A lista fica em cache por até 30 minutos na sessão da aba, separada por conta.
 
 Isso evita os botões junto ao autor e nos cartões do canal identificado como inscrito. O gerenciamento manual da lista de bloqueados continua disponível no painel; a mudança não apaga bloqueios que você já tenha criado.
 
+### Assistir mais tarde e inscrição ao bloquear
+
+Ao clicar em **Bloquear**, a extensão também remove os vídeos desse canal da sua lista **Assistir mais tarde** e cancela sua inscrição, caso você seja inscrito. Os botões continuam ocultos nos canais inscritos; para bloquear um deles, use o @ ou o link no painel da extensão.
+
+A remoção começa pelos itens carregados, priorizando o vídeo atual, e consulta as outras páginas da lista quando necessário. Ela usa os comandos autenticados do próprio YouTube e só informa sucesso depois da confirmação. O bloqueio continua ativo se a lista ou o cancelamento falhar, e a extensão mostra um aviso para você conferir. Só o Assistir mais tarde é alterado; suas outras playlists são preservadas.
+
+**Desbloquear não reinscreve você no canal nem recoloca vídeos na lista.** A limpeza acontece em novos cliques de bloqueio, inclusive quando você bloqueia novamente um canal já listado no painel; instalar a atualização não inicia uma limpeza de todos os bloqueios antigos. Não há varredura contínua da conta.
+
 ### Buscar, desbloquear e abrir o painel
 
 Abra o ícone do CanalNonGrato no navegador. A lista mostra o nome e a foto do canal; iniciais aparecem enquanto a imagem carrega ou quando não é possível obtê-la. Use a busca para encontrar um canal e **Desbloquear** para permitir que volte a aparecer.

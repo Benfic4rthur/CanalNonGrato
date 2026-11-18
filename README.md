@@ -31,6 +31,7 @@ Viu um canal que não quer mais acompanhar? Clique em **Bloquear**. O CanalNonGr
 | **Um clique no vídeo aberto** | O botão **Bloquear canal** fica ao lado de Inscrever-se. Nas listas, use **Bloquear** junto ao autor. |
 | **Sua lista, organizada** | Nome e foto do canal, busca e desbloqueio pelo ícone da extensão ou pelo painel completo. |
 | **Inscrições respeitadas** | Oculta os botões de bloqueio nos canais identificados como inscritos pelo próprio YouTube. |
+| **Limpeza ao bloquear** | Remove os vídeos do canal do Assistir mais tarde e cancela a inscrição, quando houver, usando os comandos do próprio YouTube. |
 | **Identificação do canal** | Quando disponível, usa o ID imutável do YouTube para manter o bloqueio mesmo se o nome ou o @ mudar. |
 | **Backup das suas escolhas** | Exporte e importe a lista em JSON para guardar uma cópia ou levá-la a outro navegador. |
 | **Leve no navegador** | Sem bibliotecas de execução na extensão instalada, sem servidor próprio e sem verificações periódicas. |

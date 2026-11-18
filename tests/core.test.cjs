@@ -91,3 +91,22 @@ test('lista de inscrições extrai IDs, handles e continuação somente do conte
   const next = C.subscriptionPage({ onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems: [{ channelRenderer: { ...renderer, channelId: other } }] } }] });
   assert.equal(next.channels[0].channelId, other);
 });
+
+test('Assistir mais tarde extrai somente itens salvos com identificador de ocorrência', () => {
+  const row = { videoId: 'mwVideo0001', setVideoId: 'occurrence-1', shortBylineText: { runs: [{ text: 'MW', navigationEndpoint: { browseEndpoint: { browseId: id, canonicalBaseUrl: '/@mw' } } }] } };
+  const data = { contents: { playlistVideoListRenderer: { contents: [{ playlistVideoRenderer: row }, { playlistVideoRenderer: { ...row, videoId: 'safeVideo01', setVideoId: '' } }, { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: 'next' } } } }] } }, sidebar: { playlistVideoRenderer: { ...row, setVideoId: 'not-a-member' } } };
+  const page = C.watchLaterPage(data);
+  assert.equal(page.recognized, true);
+  assert.equal(page.entries.length, 1);
+  assert.equal(page.entries[0].owner.channelId, id);
+  assert.deepEqual(page.continuations, ['next']);
+  assert.equal(C.watchLaterPage({ contents: { videoRenderer: row } }).recognized, false);
+  assert.equal(C.watchLaterPage({ contents: { playlistVideoListRenderer: { contents: [] } } }).recognized, true);
+});
+
+test('inscrições modernas relacionam o botão à entidade de estado, sem inferir pelo texto', () => {
+  const data = { header: { subscribeButtonViewModel: { channelId: id, stateEntityStoreKey: 'state-one' } }, frameworkUpdates: { entityBatchUpdate: { mutations: [{ payload: { subscriptionStateEntity: { key: 'state-one', subscribed: true } } }, { payload: { subscriptionStateEntity: { key: 'unrelated', subscribed: false } } }] } } };
+  assert.deepEqual(C.subscriptionEntries(data).map(([owner, subscribed]) => [owner.channelId, subscribed]), [[id, true]]);
+  data.frameworkUpdates.entityBatchUpdate.mutations[0].payload.subscriptionStateEntity.subscribed = false;
+  assert.equal(C.subscriptionEntries(data)[0][1], false);
+});

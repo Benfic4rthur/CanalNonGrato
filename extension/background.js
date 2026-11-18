@@ -7,6 +7,37 @@ const lookups = new Map();
 let activeLookups = 0;
 const waiters = [];
 let avatarRefresh = null;
+let cleanupQueue = Promise.resolve();
+
+async function cleanupBlockedChannel(rule, sourceTab) {
+  let createdTab;
+  try {
+    const tabs = await chrome.tabs.query({ url: ["https://www.youtube.com/*"] });
+    let tab = tabs.find(tab => tab.id === sourceTab) || tabs.find(tab => tab.active && !tab.discarded) || tabs.find(tab => !tab.discarded);
+    if (!tab) {
+      tab = await chrome.tabs.create({ url: "about:blank", active: false });
+      createdTab = tab.id;
+      await new Promise((resolve, reject) => {
+        const listener = (id, change, current) => { if (id === tab.id && current.url?.startsWith("https://www.youtube.com/") && change.status === "complete") finish(); };
+        const timer = setTimeout(() => finish(new Error("Abra o YouTube para concluir a remoção.")), 20000);
+        function finish(error) { clearTimeout(timer); chrome.tabs.onUpdated.removeListener(listener); error ? reject(error) : resolve(); }
+        chrome.tabs.onUpdated.addListener(listener);
+        chrome.tabs.update(tab.id, { url: "https://www.youtube.com/playlist?list=WL" }).then(current => { if (current.status === "complete" && current.url?.startsWith("https://www.youtube.com/")) finish(); }, finish);
+      });
+    }
+    // An unblock while a previous cleanup was running cancels queued work too.
+    if (!(await readRules()).some(item => item.id === rule.id)) return;
+    const result = await chrome.tabs.sendMessage(tab.id, { type: "cleanupBlockedChannel", rule }, { frameId: 0 });
+    chrome.runtime.sendMessage({ type: "cleanupFinished", name: rule.name || rule.handle || "Canal", ...result }).catch(() => {});
+  } catch {
+    chrome.runtime.sendMessage({ type: "cleanupFinished", errors: ["O canal está bloqueado, mas não consegui atualizar o YouTube. Abra uma aba do YouTube e bloqueie novamente para concluir."] }).catch(() => {});
+  } finally {
+    if (createdTab) {
+      const tab = await chrome.tabs.get(createdTab).catch(() => null);
+      if (tab && !tab.active) await chrome.tabs.remove(createdTab).catch(() => {});
+    }
+  }
+}
 
 // YouTube can keep an existing document alive across many SPA navigations. Static
 // document_start scripts alone never activate in tabs opened before installation.
@@ -121,12 +152,16 @@ async function addRule(raw) {
   if (!rule.avatarUrl && (rule.channelId || rule.path)) refreshAvatars().catch(console.warn);
   return rule;
 }
-async function handle(message) {
+async function handle(message, sender) {
   switch (message.type) {
     case "refreshAvatars": await refreshAvatars(); return true;
     case "resolveVideo": return resolveVideo(message.videoId);
     case "resolveChannel": return resolveChannel(message.input);
-    case "block": return addRule(message.channel);
+    case "block": {
+      const rule = await addRule(message.channel);
+      cleanupQueue = cleanupQueue.catch(() => {}).then(() => cleanupBlockedChannel(rule, sender?.tab?.id));
+      return rule;
+    }
     case "unblock": {
       const rules = await readRules();
       await chrome.storage.local.set({ [KEY]: rules.filter(rule => rule.id !== message.id) });
@@ -154,9 +189,10 @@ async function handle(message) {
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || !message || typeof message.type !== "string") return;
+  if (message.type === "cleanupFinished") return;
   const mutation = ["block", "unblock", "import"].includes(message.type);
   // Serialize read/modify/write operations across tabs, without blocking metadata lookups.
-  const job = mutation ? writeQueue.then(() => handle(message)) : handle(message);
+  const job = mutation ? writeQueue.then(() => handle(message, sender)) : handle(message, sender);
   if (mutation) writeQueue = job.catch(() => {});
   job.then(value => respond({ ok: true, value }), error => respond({ ok: false, error: error.message || "Não foi possível concluir." }));
   return true;
